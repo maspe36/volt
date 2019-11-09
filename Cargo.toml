@@ -1,0 +1,13 @@
+[package]
+name = "volt"
+version = "0.1.0"
+authors = ["Sam Privett <privett.sam@gmail.com>", "CJ Turner <cturner0098@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+amethyst = "0.13.2"
+
+[features]
+empty = ["amethyst/empty"]
+metal = ["amethyst/metal"]
+vulkan = ["amethyst/vulkan"]

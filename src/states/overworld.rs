@@ -1,8 +1,11 @@
 use amethyst::{
     assets::{AssetStorage, Loader, Handle},
-    core::transform::Transform,
+    core::{transform::Transform, Time},
+    ecs::prelude::Entity,
     prelude::*,
-    renderer::{Camera, ImageFormat, SpriteRender, SpriteSheet, SpriteSheetFormat, Texture}
+    renderer::{Camera, ImageFormat, SpriteRender, SpriteSheet, SpriteSheetFormat, Texture},
+    ui::{UiCreator, UiFinder, UiText},
+    utils::fps_counter::FpsCounter,
 };
 
 use crate::components::Trainer;
@@ -76,17 +79,54 @@ fn initialize_camera(world: &mut World) {
 #[derive(Default)]
 pub struct Overworld {
     sprite_sheet_handle: Option<Handle<SpriteSheet>>,
+    fps_display: Option<Entity>,
 }
 
 impl SimpleState for Overworld {
     fn on_start(&mut self, _data: StateData<'_, GameData<'_, '_>>) {
         let world = _data.world;
 
-        self.sprite_sheet_handle.replace(load_sprite_sheet(world));
-
         world.register::<Trainer>();
+
+        self.sprite_sheet_handle.replace(load_sprite_sheet(world));
 
         initialize_trainer(world, self.sprite_sheet_handle.clone().unwrap());
         initialize_camera(world);
+
+        world.exec(|mut creator: UiCreator<'_>| {
+            creator.create("ui/overworld.ron", ());
+        });
+    }
+
+    fn update(&mut self, _data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
+        let StateData { world, .. } = _data;
+
+        self.update_fps(world);
+
+        Trans::None
+    }
+}
+
+impl Overworld {
+
+    // Update the FPS counter
+    fn update_fps(&mut self, world: &mut World) {
+        if self.fps_display.is_none() {
+            world.exec(|finder: UiFinder<'_>| {
+                if let Some(entity) = finder.find("fps") {
+                    self.fps_display = Some(entity);
+                }
+            });
+        }
+
+        let mut ui_text = world.write_storage::<UiText>();
+        {
+            if let Some(fps_display) = self.fps_display.and_then(|entity| ui_text.get_mut(entity)) {
+                if world.read_resource::<Time>().frame_number() % 20 == 0 {
+                    let fps = world.read_resource::<FpsCounter>().sampled_fps();
+                    fps_display.text = format!("FPS: {:.*}", 2, fps);
+                }
+            }
+        }
     }
 }

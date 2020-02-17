@@ -41,6 +41,7 @@ impl<'s> System<'s> for TrainerMovementSystem {
         Read<'s, Time>
     );
 
+    // TODO Hook into overworld state ticks to define frequency of movement
     fn run(&mut self, (trainers, mut sprite_renders, input, time): Self::SystemData) {
         for (_, sprite_render) in (&trainers, &mut sprite_renders).join() {
             // Determine the new direction based on inputs

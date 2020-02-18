@@ -16,19 +16,19 @@ enum Direction {
     Up,
 }
 
-static FRAMES_PER_DIRECTION: usize = 3;
+static SPRITES_PER_DIRECTION: usize = 3;
 
 static DOWN_MIN: usize = 0;
-static DOWN_MAX: usize = DOWN_MIN + FRAMES_PER_DIRECTION;
+static DOWN_MAX: usize = DOWN_MIN + SPRITES_PER_DIRECTION;
 
 static LEFT_MIN: usize = 4;
-static LEFT_MAX: usize = LEFT_MIN + FRAMES_PER_DIRECTION;
+static LEFT_MAX: usize = LEFT_MIN + SPRITES_PER_DIRECTION;
 
 static RIGHT_MIN: usize = 8;
-static RIGHT_MAX: usize = RIGHT_MIN + FRAMES_PER_DIRECTION;
+static RIGHT_MAX: usize = RIGHT_MIN + SPRITES_PER_DIRECTION;
 
 static UP_MIN: usize = 12;
-static UP_MAX: usize = UP_MIN + FRAMES_PER_DIRECTION;
+static UP_MAX: usize = UP_MIN + SPRITES_PER_DIRECTION;
 
 #[derive(SystemDesc)]
 pub struct TrainerMovementSystem;
@@ -45,9 +45,7 @@ impl<'s> System<'s> for TrainerMovementSystem {
     fn run(&mut self, (trainers, mut sprite_renders, input, time): Self::SystemData) {
         for (_, sprite_render) in (&trainers, &mut sprite_renders).join() {
             // Determine the new direction based on inputs
-            let (attempted_movement, new_direction)  = get_attempted_input_direction(&input);
-
-            if attempted_movement {
+            if let Some(new_direction) = get_input_direction(&input) {
                 // Get the current direction
                 let original_direction = get_sprite_direction(sprite_render.sprite_number);
 
@@ -55,13 +53,11 @@ impl<'s> System<'s> for TrainerMovementSystem {
                 let (original_min, original_max) = get_sprite_range(&original_direction);
 
                 // Only inclusive on the minimum end because we can't increment past the max
-                let sprite_can_increment =
-                    original_min <= sprite_render.sprite_number &&
-                    sprite_render.sprite_number < original_max;
+                let sprite_in_range = original_min <= sprite_render.sprite_number && sprite_render.sprite_number < original_max;
 
                 // If the new direction is the same as the original AND the sprite number hasn't
                 // overflown the directional max yet, increment the frame
-                if new_direction == original_direction && sprite_can_increment {
+                if new_direction == original_direction && sprite_in_range {
                     sprite_render.sprite_number += 1;
                 } else {
                     let (new_min, _) = get_sprite_range(&new_direction);
@@ -101,30 +97,26 @@ fn get_sprite_direction(sprite_number: usize) -> Direction {
     return direction;
 }
 
-fn get_attempted_input_direction(input: &Read<InputHandler<StringBindings>>) -> (bool, Direction) {
-    let mut direction = Direction::Stationary;
-    let mut attempt = false;
+fn get_input_direction(input: &Read<InputHandler<StringBindings>>) -> Option<Direction> {
+    let mut direction = None;
 
     if let Some(value) = input.axis_value("horizontal") {
         if value < 0.0 {
-            direction = Direction::Left;
-            attempt = true;
+            direction = Some(Direction::Left);
         }
         if value > 0.0 {
-            direction = Direction::Right;
-            attempt = true;
+            direction = Some(Direction::Right);
         }
     }
 
     if let Some(value) = input.axis_value("vertical") {
         if value > 0.0 {
-            direction = Direction::Up;
-            attempt = true;
+            direction = Some(Direction::Up);
         }
         if value < 0.0 {
-            attempt = true;
+            direction = Some(Direction::Down);
         }
     }
 
-    return (attempt, direction);
+    return direction;
 }

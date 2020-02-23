@@ -37,12 +37,11 @@ impl<'s> System<'s> for TrainerMovementSystem {
     type SystemData = (
         ReadStorage<'s, Trainer>,
         WriteStorage<'s, SpriteRender>,
-        Read<'s, InputHandler<StringBindings>>,
-        Read<'s, Time>
+        Read<'s, InputHandler<StringBindings>>
     );
 
     // TODO Hook into overworld state ticks to define frequency of movement
-    fn run(&mut self, (trainers, mut sprite_renders, input, time): Self::SystemData) {
+    fn run(&mut self, (trainers, mut sprite_renders, input): Self::SystemData) {
         for (_, sprite_render) in (&trainers, &mut sprite_renders).join() {
             // Determine the new direction based on inputs
             if let Some(new_direction) = get_input_direction(&input) {

@@ -10,6 +10,8 @@ use amethyst::{
     utils::{fps_counter::FpsCounter, application_root_dir},
 };
 
+use std::time::{Duration, Instant};
+
 use crate::components::Trainer;
 use crate::systems::TrainerMovementSystem;
 
@@ -84,11 +86,15 @@ pub struct Overworld<'a, 'b> {
     sprite_sheet_handle: Option<Handle<SpriteSheet>>,
     fps_display: Option<Entity>,
     dispatcher: Option<Dispatcher<'a, 'b>>,
+    last_execution: Option<Instant>,
+    tick_rate: Option<Duration>,
 }
 
 impl<'a, 'b> SimpleState for Overworld<'a, 'b> {
     fn on_start(&mut self, _data: StateData<'_, GameData<'_, '_>>) {
         let world = _data.world;
+        self.last_execution = Some(Instant::now());
+        self.tick_rate = Some(Duration::from_millis(150));
 
         let mut dispatcher_builder = DispatcherBuilder::new();
 
@@ -122,8 +128,11 @@ impl<'a, 'b> SimpleState for Overworld<'a, 'b> {
     fn update(&mut self, _data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
         let StateData { world, .. } = _data;
 
-        if let Some(dispatcher) = self.dispatcher.as_mut() {
-            dispatcher.dispatch(world);
+        if self.last_execution.unwrap().elapsed() > self.tick_rate.unwrap() {
+            if let Some(dispatcher) = self.dispatcher.as_mut() {
+                dispatcher.dispatch(world);
+            }
+            self.last_execution = Some(Instant::now());
         }
 
         self.update_fps(world);

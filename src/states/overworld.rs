@@ -1,14 +1,17 @@
 use amethyst::{
     assets::{AssetStorage, Loader, Handle},
-    core::{transform::Transform, Time},
+    core::{ArcThreadPool, transform::Transform, Time},
     ecs::prelude::Entity,
+    input::{Bindings, InputSystemDesc, StringBindings},
     prelude::*,
     renderer::{Camera, ImageFormat, SpriteRender, SpriteSheet, SpriteSheetFormat, Texture},
+    shred::{Dispatcher, DispatcherBuilder},
     ui::{UiCreator, UiFinder, UiText},
-    utils::fps_counter::FpsCounter,
+    utils::{fps_counter::FpsCounter, application_root_dir},
 };
 
 use crate::components::Trainer;
+use crate::systems::TrainerMovementSystem;
 
 pub const SCREEN_HEIGHT: f32 = 500.0;
 pub const SCREEN_WIDTH: f32 = 500.0;
@@ -77,14 +80,34 @@ fn initialize_camera(world: &mut World) {
 }
 
 #[derive(Default)]
-pub struct Overworld {
+pub struct Overworld<'a, 'b> {
     sprite_sheet_handle: Option<Handle<SpriteSheet>>,
     fps_display: Option<Entity>,
+    dispatcher: Option<Dispatcher<'a, 'b>>,
 }
 
-impl SimpleState for Overworld {
+impl<'a, 'b> SimpleState for Overworld<'a, 'b> {
     fn on_start(&mut self, _data: StateData<'_, GameData<'_, '_>>) {
         let world = _data.world;
+
+        let mut dispatcher_builder = DispatcherBuilder::new();
+
+        // Hacky workaround to explicitly add our input_system bindings to this dispatcher
+        dispatcher_builder.add(
+            InputSystemDesc::<StringBindings>::new(self.get_bindings()).build(world),
+            "input_system",
+            &[]
+        );
+
+        dispatcher_builder.add(TrainerMovementSystem, "trainer_movement_system", &["input_system"]);
+
+        let mut dispatcher = dispatcher_builder
+            .with_pool((*world.read_resource::<ArcThreadPool>()).clone())
+            .build();
+
+        dispatcher.setup(world);
+
+        self.dispatcher = Some(dispatcher);
 
         self.sprite_sheet_handle.replace(load_sprite_sheet(world));
 
@@ -99,13 +122,17 @@ impl SimpleState for Overworld {
     fn update(&mut self, _data: &mut StateData<'_, GameData<'_, '_>>) -> SimpleTrans {
         let StateData { world, .. } = _data;
 
+        if let Some(dispatcher) = self.dispatcher.as_mut() {
+            dispatcher.dispatch(world);
+        }
+
         self.update_fps(world);
 
         Trans::None
     }
 }
 
-impl Overworld {
+impl<'a, 'b> Overworld<'a, 'b> {
 
     // Update the FPS counter
     fn update_fps(&mut self, world: &mut World) {
@@ -126,5 +153,16 @@ impl Overworld {
                 }
             }
         }
+    }
+
+    fn get_bindings(&mut self) -> Option<Bindings<StringBindings>> {
+        let app_root = application_root_dir().unwrap();
+        let config_root = app_root.join("config");
+        let mut bindings = Bindings::load(config_root.join("bindings.ron"));
+        match bindings.check_invariants() {
+            Ok(_) => {},
+            Err(_) => println!("Invalid bindings!"),
+        }
+        Some(bindings)
     }
 }

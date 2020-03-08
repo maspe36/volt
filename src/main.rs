@@ -6,7 +6,7 @@ use amethyst::{
         types::DefaultBackend,
         RenderingBundle,
     },
-    input::{InputBundle, StringBindings},
+    input::StringBindings,
     ui::{RenderUi, UiBundle},
     utils::{application_root_dir, fps_counter::FpsCounterBundle},
 };
@@ -27,14 +27,8 @@ fn main() -> amethyst::Result<()> {
 
     let game_data = GameDataBuilder::default()
         .with_bundle(TransformBundle::new())?
-        .with_bundle(
-            InputBundle::<StringBindings>::new().with_bindings_from_file(
-                config_root.join("bindings.ron"),
-            )?,
-        )?
         .with_bundle(FpsCounterBundle::default())?
         .with_bundle(UiBundle::<StringBindings>::new())?
-        .with(systems::TrainerMovementSystem, "trainer_movement_system", &["input_system"])
         .with_bundle(
             RenderingBundle::<DefaultBackend>::new()
                 .with_plugin(

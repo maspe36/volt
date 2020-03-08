@@ -1,5 +1,5 @@
 use amethyst::{
-    core::{SystemDesc, timing::Time},
+    core::SystemDesc,
     derive::SystemDesc,
     ecs::prelude::{Join, ReadStorage, Read, System, SystemData, World, WriteStorage},
     input::{InputHandler, StringBindings},
@@ -40,7 +40,6 @@ impl<'s> System<'s> for TrainerMovementSystem {
         Read<'s, InputHandler<StringBindings>>
     );
 
-    // TODO Hook into overworld state ticks to define frequency of movement
     fn run(&mut self, (trainers, mut sprite_renders, input): Self::SystemData) {
         for (_, sprite_render) in (&trainers, &mut sprite_renders).join() {
             // Determine the new direction based on inputs

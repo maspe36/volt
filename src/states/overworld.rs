@@ -86,8 +86,6 @@ impl SimpleState for Overworld {
     fn on_start(&mut self, _data: StateData<'_, GameData<'_, '_>>) {
         let world = _data.world;
 
-        world.register::<Trainer>();
-
         self.sprite_sheet_handle.replace(load_sprite_sheet(world));
 
         initialize_trainer(world, self.sprite_sheet_handle.clone().unwrap());
